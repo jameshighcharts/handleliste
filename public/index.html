@@ -15,6 +15,9 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Handleliste">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script>
         // Register service worker for PWA / install support.
@@ -28,7 +31,9 @@
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            font-size: 16px;
+            font-weight: 400;
             background: #E7E5FA;
             color: #1C1C1E;
             min-height: 100dvh;
@@ -92,7 +97,7 @@
             z-index: 10;
         }
 
-        .header-title { display: flex; flex-direction: column; gap: 3px; }
+        .header-title { display: flex; flex-direction: column; gap: 8px; }
 
         h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.8px; line-height: 1; }
 
@@ -105,8 +110,8 @@
             align-items: center;
             gap: 5px;
             font-family: inherit;
-            font-size: 12px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 500;
             color: #AEAEB2;
             letter-spacing: 0.3px;
             line-height: 1;
@@ -258,7 +263,7 @@
 
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
-        .mic-hint { font-size: 13px; color: #AEAEB2; font-weight: 500; letter-spacing: 0.2px; }
+        .mic-hint { font-size: 14px; color: #AEAEB2; font-weight: 500; letter-spacing: 0.2px; }
 
         /* ── Sheet overlay ───────────────────────────────────────────────────── */
         .overlay {
@@ -370,6 +375,38 @@
         }
 
         .add-btn:active { opacity: 0.7; }
+
+        /* Food servings */
+        .recipe-card {
+            display: flex;
+            align-items: center;
+            background: #F9F9F9;
+            border-radius: 4px;
+            padding: 16px;
+            margin-bottom: 12px;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .recipe-card:hover { background: #F0F0F0; }
+
+        .recipe-info { flex: 1; }
+        .recipe-name { font-size: 16px; font-weight: 600; color: #1C1C1E; margin-bottom: 4px; }
+        .recipe-count { font-size: 13px; color: #8E8E93; }
+
+        .ingredient-item {
+            display: flex;
+            align-items: center;
+            background: white;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 8px;
+            gap: 10px;
+        }
+
+        .ingredient-item .delete-btn { margin-left: auto; }
+        .ingredient-name { flex: 1; font-size: 15px; color: #1C1C1E; }
     </style>
 </head>
 <body>
@@ -387,12 +424,22 @@
         </button>
     </div>
     <div class="header-right">
+        <!-- Trips icon -->
+        <button class="icon-btn" id="tripsBtn" title="Handleturer">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2 6h4"/><path d="M2 10h4"/><path d="M2 14h4"/><path d="M2 18h4"/><path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"/>
+            </svg>
+        </button>
+        <!-- Utensils icon -->
+        <button class="icon-btn" id="utensilsBtn" title="Matservering">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
+            </svg>
+        </button>
         <!-- Share icon -->
         <button class="icon-btn" id="shareBtn" title="Del liste">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                <path d="M12 2v13"/><path d="m16 6-4-4-4 4"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
             </svg>
         </button>
         <!-- Settings icon -->
@@ -476,6 +523,61 @@
     </div>
 </div>
 
+<!-- Food servings sheet -->
+<div class="overlay" id="foodOverlay">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-content" id="foodContent">
+            <h2>Matservering</h2>
+            <div id="foodList"></div>
+            <div id="customizingRecipe" style="display:none">
+                <div class="field-label">Rediger matservering</div>
+                <div class="add-row">
+                    <input class="add-input" id="recipeName" type="text" placeholder="Navn på servering..." autocomplete="off">
+                </div>
+                <div id="ingredientsList"></div>
+                <div class="add-row">
+                    <input class="add-input" id="ingredientInput" type="text" placeholder="Legg til ingrediens..." autocomplete="off">
+                    <button class="add-btn" id="addIngredientBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                    </button>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:16px">
+                    <button class="btn-neutral" id="cancelRecipeBtn" style="flex:1">Avbryt</button>
+                    <button class="btn-neutral" id="saveRecipeBtn" style="flex:1; background:#E7E5FA; border-color:#1C1C1E; color:#1C1C1E;">Legg til lista</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trips sheet -->
+<div class="overlay" id="tripsOverlay">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-content">
+            <h2>Handleturer</h2>
+            <p class="code-hint">Lagre nåværende liste som en handletur. Den lagres med dato og navn, og deles med alle som har koden. Hent den fram igjen ved å trykke på den her — eller med tale: «samme som sist mandag», «handletur 1», eller på navn</p>
+            <div class="divider"></div>
+            <div class="field-label">Lagre nåværende liste</div>
+            <div class="add-row">
+                <input class="add-input" id="tripNameInput" type="text" placeholder="Navn på tur (valgfritt)..." autocomplete="off">
+                <button class="add-btn" id="saveTripBtn" aria-label="Lagre tur">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="tripsSaveHint" class="join-error"></div>
+            <div class="divider"></div>
+            <div class="field-label">Lagrede turer</div>
+            <div id="tripsList"></div>
+        </div>
+    </div>
+</div>
+
 <!-- Settings sheet -->
 <div class="overlay" id="settingsOverlay">
     <div class="sheet">
@@ -498,8 +600,10 @@ let sb = null;
 let listId = null;
 let listCode = null;
 let items = [];
+let trips = [];
 let realtimeChannel = null;
 const pendingInserts = new Set();
+const NO_DAYS = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
 
 // ── DOM refs ───────────────────────────────────────────────────────────────────
 const loadingOverlay   = document.getElementById('loadingOverlay');
@@ -557,6 +661,7 @@ async function init() {
         }
 
         await loadItems();
+        await loadTrips();
         subscribeRealtime();
         updateCodeDisplay();
     } catch (err) {
@@ -599,7 +704,9 @@ async function switchToList(id, code) {
     listCode = code;
     localStorage.setItem('handleliste_code', code);
     items = [];
+    trips = [];
     await loadItems();
+    await loadTrips();
     subscribeRealtime();
     updateCodeDisplay();
 }
@@ -830,7 +937,7 @@ async function processTranscript(text) {
         const res  = await fetch('/api/extract', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ transcript: text }),
+            body: JSON.stringify({ transcript: text, recipes: PRESETS, trips: tripsPayload(), today: todayPayload() }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -910,6 +1017,312 @@ joinBtn.addEventListener('click', async () => {
     }
 });
 
+// ── Food servings sheet ───────────────────────────────────────────────────────
+const utensilsBtn = document.getElementById('utensilsBtn');
+const foodOverlay = document.getElementById('foodOverlay');
+const foodContent = document.getElementById('foodContent');
+const foodList = document.getElementById('foodList');
+const customizingRecipe = document.getElementById('customizingRecipe');
+const recipeName = document.getElementById('recipeName');
+const ingredientsList = document.getElementById('ingredientsList');
+const ingredientInput = document.getElementById('ingredientInput');
+const addIngredientBtn = document.getElementById('addIngredientBtn');
+const cancelRecipeBtn = document.getElementById('cancelRecipeBtn');
+const saveRecipeBtn = document.getElementById('saveRecipeBtn');
+
+const PRESETS = {
+    taco: {
+        name: 'Taco',
+        ingredients: [
+            'salat',
+            'tacosaus',
+            'tortilla chips',
+            'avocado',
+            'tomat',
+            'mais',
+            'løk',
+            'agurk',
+            'paprika',
+            'taco lefser',
+            'kjøttdeig',
+            'ost',
+            'rømme'
+        ]
+    }
+};
+
+let currentRecipe = null;
+let editingRecipe = false;
+
+utensilsBtn.addEventListener('click', () => {
+    showFoodSheet();
+});
+
+function showFoodSheet() {
+    currentRecipe = null;
+    editingRecipe = false;
+    customizingRecipe.style.display = 'none';
+    foodList.innerHTML = '';
+
+    Object.entries(PRESETS).forEach(([key, preset]) => {
+        const card = document.createElement('div');
+        card.className = 'recipe-card';
+        card.innerHTML = `
+            <div class="recipe-info">
+                <div class="recipe-name">${esc(preset.name)}</div>
+                <div class="recipe-count">${preset.ingredients.length} ingredienser</div>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <polyline points="9 18 15 12 9 6"/>
+            </svg>
+        `;
+        card.addEventListener('click', () => startEditRecipe({ ...preset }));
+        foodList.appendChild(card);
+    });
+
+    // Custom recipe option
+    const customCard = document.createElement('div');
+    customCard.className = 'recipe-card';
+    customCard.innerHTML = `
+        <div class="recipe-info">
+            <div class="recipe-name">Egen servering</div>
+            <div class="recipe-count">Lag din egen</div>
+        </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <polyline points="9 18 15 12 9 6"/>
+        </svg>
+    `;
+    customCard.addEventListener('click', () => startEditRecipe({ name: '', ingredients: [] }));
+    foodList.appendChild(customCard);
+
+    foodOverlay.classList.add('visible');
+}
+
+function startEditRecipe(recipe) {
+    currentRecipe = recipe;
+    editingRecipe = true;
+    recipeName.value = recipe.name;
+    renderIngredientsList();
+    foodList.style.display = 'none';
+    customizingRecipe.style.display = 'block';
+    recipeName.focus();
+}
+
+function renderIngredientsList() {
+    ingredientsList.innerHTML = '';
+    if (currentRecipe.ingredients.length > 0) {
+        const label = document.createElement('div');
+        label.className = 'field-label';
+        label.textContent = 'Ingredienser';
+        ingredientsList.appendChild(label);
+
+        currentRecipe.ingredients.forEach((ing, idx) => {
+            const item = document.createElement('div');
+            item.className = 'ingredient-item';
+            item.innerHTML = `
+                <span class="ingredient-name">${esc(ing)}</span>
+                <button class="delete-btn" aria-label="Fjern">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            `;
+            item.querySelector('.delete-btn').addEventListener('click', () => {
+                currentRecipe.ingredients.splice(idx, 1);
+                renderIngredientsList();
+            });
+            ingredientsList.appendChild(item);
+        });
+    }
+}
+
+addIngredientBtn.addEventListener('click', () => {
+    const ing = ingredientInput.value.trim();
+    if (ing && !currentRecipe.ingredients.includes(ing)) {
+        currentRecipe.ingredients.push(ing);
+        ingredientInput.value = '';
+        renderIngredientsList();
+        ingredientInput.focus();
+    }
+});
+
+ingredientInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') addIngredientBtn.click();
+});
+
+cancelRecipeBtn.addEventListener('click', () => {
+    currentRecipe = null;
+    editingRecipe = false;
+    foodList.style.display = '';
+    customizingRecipe.style.display = 'none';
+});
+
+saveRecipeBtn.addEventListener('click', async () => {
+    const name = recipeName.value.trim();
+    if (!name) {
+        recipeName.focus();
+        return;
+    }
+    if (currentRecipe.ingredients.length === 0) {
+        ingredientInput.focus();
+        return;
+    }
+
+    const items = currentRecipe.ingredients.map(ing => `${name}: ${ing}`);
+    await addItems(items);
+    foodOverlay.classList.remove('visible');
+    currentRecipe = null;
+    editingRecipe = false;
+});
+
+foodOverlay.addEventListener('click', e => {
+    if (e.target === foodOverlay) {
+        foodOverlay.classList.remove('visible');
+        currentRecipe = null;
+        editingRecipe = false;
+        foodList.style.display = '';
+        customizingRecipe.style.display = 'none';
+    }
+});
+
+// ── Trips (Turer) ───────────────────────────────────────────────────────────────
+const tripsBtn       = document.getElementById('tripsBtn');
+const tripsOverlay    = document.getElementById('tripsOverlay');
+const tripsList       = document.getElementById('tripsList');
+const tripNameInput   = document.getElementById('tripNameInput');
+const saveTripBtn     = document.getElementById('saveTripBtn');
+const tripsSaveHint   = document.getElementById('tripsSaveHint');
+
+async function loadTrips() {
+    const { data, error } = await sb
+        .from('trips')
+        .select('*')
+        .eq('list_id', listId)
+        .order('created_at', { ascending: false });
+    if (error) { console.error('loadTrips:', error); return; }
+    trips = data || [];
+}
+
+function fmtTripDate(iso) {
+    const d = new Date(iso);
+    const day = NO_DAYS[d.getDay()];
+    return `${day} ${d.toLocaleDateString('no-NO', { day: 'numeric', month: 'short' })}`;
+}
+
+tripsBtn.addEventListener('click', () => {
+    tripNameInput.value = '';
+    tripsSaveHint.textContent = '';
+    renderTrips();
+    tripsOverlay.classList.add('visible');
+});
+
+tripsOverlay.addEventListener('click', e => {
+    if (e.target === tripsOverlay) tripsOverlay.classList.remove('visible');
+});
+
+function renderTrips() {
+    tripsList.innerHTML = '';
+    if (!trips.length) {
+        const empty = document.createElement('div');
+        empty.className = 'recipe-count';
+        empty.style.padding = '8px 4px';
+        empty.textContent = 'Ingen lagrede turer ennå.';
+        tripsList.appendChild(empty);
+        return;
+    }
+
+    trips.forEach((trip, idx) => {
+        const num = idx + 1;
+        const itemTexts = Array.isArray(trip.items) ? trip.items : [];
+        const card = document.createElement('div');
+        card.className = 'recipe-card';
+        const title = trip.name?.trim() || `Tur ${num}`;
+        card.innerHTML = `
+            <div class="recipe-info">
+                <div class="recipe-name">${num}. ${esc(title)}</div>
+                <div class="recipe-count">${fmtTripDate(trip.created_at)} · ${itemTexts.length} varer</div>
+            </div>
+            <button class="delete-btn" aria-label="Slett tur" style="margin-right:4px">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <polyline points="9 18 15 12 9 6"/>
+            </svg>`;
+        card.addEventListener('click', e => {
+            if (e.target.closest('.delete-btn')) return;
+            addTripToList(trip);
+        });
+        card.querySelector('.delete-btn').addEventListener('click', e => {
+            e.stopPropagation();
+            deleteTrip(trip);
+        });
+        tripsList.appendChild(card);
+    });
+}
+
+async function addTripToList(trip) {
+    const itemTexts = Array.isArray(trip.items) ? trip.items : [];
+    if (!itemTexts.length) { tripsOverlay.classList.remove('visible'); return; }
+    await addItems(itemTexts);
+    tripsOverlay.classList.remove('visible');
+}
+
+saveTripBtn.addEventListener('click', async () => {
+    const itemTexts = items.map(i => i.text);
+    if (!itemTexts.length) {
+        tripsSaveHint.textContent = 'Listen er tom — ingenting å lagre.';
+        return;
+    }
+    const name = tripNameInput.value.trim() || null;
+    saveTripBtn.disabled = true;
+
+    const newTrip = {
+        id: crypto.randomUUID(),
+        list_id: listId,
+        name,
+        items: itemTexts,
+        created_at: new Date().toISOString(),
+    };
+    const { error } = await sb.from('trips').insert(newTrip);
+    saveTripBtn.disabled = false;
+
+    if (error) { tripsSaveHint.textContent = 'Kunne ikke lagre: ' + error.message; return; }
+
+    trips.unshift(newTrip);
+    tripNameInput.value = '';
+    tripsSaveHint.textContent = '';
+    renderTrips();
+});
+
+tripNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') saveTripBtn.click(); });
+
+async function deleteTrip(trip) {
+    if (!confirm(`Slette turen "${trip.name?.trim() || 'uten navn'}"?`)) return;
+    trips = trips.filter(t => t.id !== trip.id);
+    renderTrips();
+    const { error } = await sb.from('trips').delete().eq('id', trip.id);
+    if (error) { console.error('deleteTrip:', error); await loadTrips(); renderTrips(); }
+}
+
+// Compact trip payload for the voice extractor.
+function tripsPayload() {
+    return trips.map((trip, idx) => {
+        const d = new Date(trip.created_at);
+        return {
+            number: idx + 1,
+            name: trip.name?.trim() || null,
+            date: trip.created_at.slice(0, 10),
+            weekday: NO_DAYS[d.getDay()],
+            items: Array.isArray(trip.items) ? trip.items : [],
+        };
+    });
+}
+
+function todayPayload() {
+    const now = new Date();
+    return { date: now.toISOString().slice(0, 10), weekday: NO_DAYS[now.getDay()] };
+}
+
 // ── Settings sheet ─────────────────────────────────────────────────────────────
 settingsBtn.addEventListener('click', () => settingsOverlay.classList.add('visible'));
 settingsOverlay.addEventListener('click', e => { if (e.target === settingsOverlay) settingsOverlay.classList.remove('visible'); });
@@ -936,8 +1349,10 @@ newListBtn.addEventListener('click', async () => {
     if (realtimeChannel) { await realtimeChannel.unsubscribe(); realtimeChannel = null; }
     items = []; listId = null; listCode = null;
     localStorage.removeItem('handleliste_code');
+    trips = [];
     await createNewList();
     await loadItems();
+    await loadTrips();
     subscribeRealtime();
     updateCodeDisplay();
     loadingOverlay.style.display = 'none';
