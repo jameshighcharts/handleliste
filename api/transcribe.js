@@ -26,6 +26,7 @@ module.exports = async function handler(req, res) {
             model: 'gpt-4o-transcribe',
             file,
             language: 'no',
+            prompt: 'Dette er en norsk handleliste lest opp på norsk. Vanlige ord: melk, brød, egg, smør, ost, kjøttdeig, kylling, laks, poteter, epler, bananer, tomater, agurk, paprika, løk, hvitløk, pasta, ris, mel, sukker, kaffe, te, juice, yoghurt, rømme, fløte, toalettpapir, tannkrem, såpe.',
         });
 
         return res.status(200).json({ text: transcription.text });
