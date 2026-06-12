@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Handleliste</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: #F5F5F0;
+            color: #1C1C1E;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        /* ── Loading ─────────────────────────────────────────────────────────── */
+        #loadingOverlay {
+            position: fixed;
+            inset: 0;
+            background: #F5F5F0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .load-spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #E5E5EA;
+            border-top-color: #1C1C1E;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .load-error {
+            text-align: center;
+            color: #3C3C43;
+            font-size: 16px;
+            line-height: 1.7;
+            padding: 20px;
+        }
+
+        .load-error button {
+            display: block;
+            margin: 12px auto 0;
+            padding: 10px 24px;
+            background: #1C1C1E;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        /* ── Header ──────────────────────────────────────────────────────────── */
+        header {
+            padding: 52px 24px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #F5F5F0;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header-title { display: flex; flex-direction: column; gap: 3px; }
+
+        h1 { font-size: 34px; font-weight: 700; letter-spacing: -0.8px; line-height: 1; }
+
+        .code-chip {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 600;
+            color: #AEAEB2;
+            letter-spacing: 0.3px;
+            line-height: 1;
+        }
+
+        .code-chip:hover .code-val { color: #636366; }
+
+        .code-val {
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: #636366;
+            letter-spacing: 2px;
+        }
+
+        .header-right { display: flex; align-items: center; gap: 4px; }
+
+        .icon-btn {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            color: #8E8E93;
+            transition: background 0.15s;
+        }
+
+        .icon-btn:hover  { background: rgba(0,0,0,0.06); }
+        .icon-btn:active { background: rgba(0,0,0,0.1);  }
+
+        /* ── List ────────────────────────────────────────────────────────────── */
+        .list-container { flex: 1; padding: 4px 20px 160px; overflow-y: auto; }
+
+        .empty-state { text-align: center; padding: 80px 20px 40px; color: #C7C7CC; display: none; }
+        .empty-state.visible { display: block; }
+        .empty-icon { font-size: 56px; margin-bottom: 16px; display: block; }
+        .empty-state p { font-size: 17px; font-weight: 500; line-height: 1.5; }
+
+        .section-label {
+            font-size: 12px; font-weight: 600; color: #AEAEB2;
+            letter-spacing: 0.8px; text-transform: uppercase; padding: 16px 4px 8px;
+        }
+
+        .item {
+            display: flex;
+            align-items: center;
+            background: #FFFFFF;
+            border-radius: 14px;
+            padding: 15px 16px;
+            margin-bottom: 8px;
+            gap: 13px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05), 0 0 0 1px rgba(0,0,0,0.04);
+            animation: slideIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px) scale(0.98); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .item:active { transform: scale(0.98); }
+
+        .check-ring {
+            width: 26px; height: 26px;
+            border: 2px solid #D1D1D6; border-radius: 50%; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .item.checked .check-ring { background: #30D158; border-color: #30D158; }
+
+        .checkmark {
+            display: none;
+            width: 10px; height: 6px;
+            border-left: 2px solid white; border-bottom: 2px solid white;
+            transform: rotate(-45deg) translate(1px, -1px);
+        }
+
+        .item.checked .checkmark { display: block; }
+
+        .item-text { font-size: 17px; font-weight: 500; flex: 1; transition: color 0.2s; line-height: 1.3; }
+        .item.checked .item-text { color: #C7C7CC; text-decoration: line-through; text-decoration-color: #C7C7CC; }
+
+        .delete-btn {
+            width: 30px; height: 30px; border: none; background: none;
+            color: #D1D1D6; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; border-radius: 50%; flex-shrink: 0;
+            transition: color 0.15s, background 0.15s;
+        }
+
+        .delete-btn:hover { color: #FF3B30; background: rgba(255,59,48,0.08); }
+
+        /* ── Bottom bar ──────────────────────────────────────────────────────── */
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 100%; max-width: 480px;
+            padding: 12px 24px env(safe-area-inset-bottom, 28px);
+            background: linear-gradient(to top, #F5F5F0 65%, rgba(245,245,240,0));
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            pointer-events: none;
+        }
+
+        .transcript-bubble {
+            background: #FFFFFF; border-radius: 20px; padding: 10px 18px;
+            font-size: 15px; color: #3C3C43; box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            max-width: 320px; text-align: center; line-height: 1.4;
+            opacity: 0; transform: translateY(6px);
+            transition: opacity 0.2s, transform 0.2s; pointer-events: none;
+        }
+
+        .transcript-bubble.visible { opacity: 1; transform: translateY(0); }
+
+        .mic-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: all; }
+
+        .mic-btn {
+            width: 76px; height: 76px; border-radius: 50%; border: none;
+            background: #1C1C1E; color: white; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.22);
+            transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .mic-btn:active { transform: scale(0.94); }
+        .mic-btn.recording { background: #FF3B30; box-shadow: 0 4px 24px rgba(255,59,48,0.35); }
+        .mic-btn.processing { background: #636366; }
+
+        .pulse-ring {
+            position: absolute; inset: -6px; border-radius: 50%;
+            background: rgba(255,59,48,0.18); opacity: 0;
+        }
+
+        .mic-btn.recording .pulse-ring { animation: pulse-anim 1.6s ease-in-out infinite; }
+
+        @keyframes pulse-anim {
+            0%   { transform: scale(0.92); opacity: 0; }
+            50%  { opacity: 1; }
+            100% { transform: scale(1.15); opacity: 0; }
+        }
+
+        .spin { animation: spin 1s linear infinite; }
+
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .mic-hint { font-size: 13px; color: #AEAEB2; font-weight: 500; letter-spacing: 0.2px; }
+
+        /* ── Sheet overlay ───────────────────────────────────────────────────── */
+        .overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            z-index: 200; display: flex; align-items: flex-end;
+            opacity: 0; pointer-events: none; transition: opacity 0.25s;
+        }
+
+        .overlay.visible { opacity: 1; pointer-events: all; }
+
+        .sheet {
+            width: 100%; max-width: 480px; margin: 0 auto;
+            background: #FFFFFF; border-radius: 24px 24px 0 0;
+            padding: 8px 0 env(safe-area-inset-bottom, 40px);
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+        }
+
+        .overlay.visible .sheet { transform: translateY(0); }
+
+        .sheet-handle { width: 36px; height: 4px; background: #E5E5EA; border-radius: 2px; margin: 12px auto 24px; }
+        .sheet-content { padding: 0 24px 8px; }
+        .sheet h2 { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+
+        /* Share sheet */
+        .big-code-row {
+            display: flex; align-items: center; justify-content: center; gap: 12px;
+            background: #F5F5F0; border-radius: 16px; padding: 20px; margin-bottom: 12px;
+        }
+
+        .big-code {
+            font-size: 30px; font-weight: 800; letter-spacing: 8px;
+            color: #1C1C1E; font-family: 'SF Mono', 'Monaco', monospace;
+        }
+
+        .copy-btn {
+            width: 38px; height: 38px; border: none; background: white; border-radius: 10px;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            color: #636366; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: color 0.2s; flex-shrink: 0;
+        }
+
+        .copy-btn:active { opacity: 0.7; }
+
+        .code-hint { font-size: 14px; color: #8E8E93; text-align: center; line-height: 1.5; margin-bottom: 4px; }
+
+        .divider { height: 1px; background: #F0F0F0; margin: 20px 0; }
+
+        .field-label { font-size: 12px; font-weight: 600; color: #8E8E93; letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; }
+
+        .join-row { display: flex; gap: 8px; margin-bottom: 8px; }
+
+        .join-input {
+            flex: 1; padding: 14px 16px; border: 1.5px solid #E5E5EA; border-radius: 12px;
+            font-size: 20px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase;
+            background: #F5F5F0; outline: none; color: #1C1C1E;
+            font-family: 'SF Mono', 'Monaco', monospace; transition: border-color 0.15s, background 0.15s;
+        }
+
+        .join-input:focus { border-color: #1C1C1E; background: white; }
+
+        .join-btn {
+            padding: 14px 18px; background: #1C1C1E; color: white; border: none;
+            border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;
+            white-space: nowrap; transition: opacity 0.15s;
+        }
+
+        .join-btn:disabled { opacity: 0.4; cursor: default; }
+
+        .join-error { font-size: 14px; color: #FF3B30; min-height: 20px; font-weight: 500; }
+
+        /* Settings sheet */
+        .btn-danger {
+            width: 100%; padding: 15px; background: none; border: 1.5px solid #E5E5EA;
+            border-radius: 14px; font-size: 16px; font-weight: 500; color: #FF3B30;
+            cursor: pointer; transition: background 0.15s; margin-bottom: 10px;
+            font-family: inherit;
+        }
+
+        .btn-danger:hover  { background: rgba(255,59,48,0.05); }
+        .btn-danger:active { background: rgba(255,59,48,0.1);  }
+
+        .btn-neutral {
+            width: 100%; padding: 15px; background: none; border: 1.5px solid #E5E5EA;
+            border-radius: 14px; font-size: 16px; font-weight: 500; color: #636366;
+            cursor: pointer; transition: background 0.15s; margin-bottom: 10px;
+            font-family: inherit;
+        }
+
+        .btn-neutral:hover  { background: rgba(0,0,0,0.03); }
+        .btn-neutral:active { background: rgba(0,0,0,0.06); }
+
+        /* Add row */
+        .add-row { display: flex; gap: 10px; margin-bottom: 16px; }
+
+        .add-input {
+            flex: 1; padding: 13px 16px; border: 1.5px solid #E5E5EA; border-radius: 12px;
+            font-size: 16px; background: white; outline: none; color: #1C1C1E;
+            transition: border-color 0.15s; font-family: inherit;
+        }
+
+        .add-input:focus { border-color: #1C1C1E; }
+
+        .add-btn {
+            width: 48px; height: 48px; border-radius: 12px; border: none;
+            background: #1C1C1E; color: white; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: opacity 0.15s;
+        }
+
+        .add-btn:active { opacity: 0.7; }
+    </style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay">
+    <div class="load-spinner"></div>
+</div>
+
+<header>
+    <div class="header-title">
+        <h1>Handleliste</h1>
+        <button class="code-chip" id="codeChip">
+            KODE&nbsp;<span class="code-val" id="codeText">─────</span>
+        </button>
+    </div>
+    <div class="header-right">
+        <!-- Share icon -->
+        <button class="icon-btn" id="shareBtn" title="Del liste">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+            </svg>
+        </button>
+        <!-- Settings icon -->
+        <button class="icon-btn" id="settingsBtn" title="Innstillinger">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+        </button>
+    </div>
+</header>
+
+<div class="list-container">
+    <div class="add-row">
+        <input class="add-input" id="addInput" type="text" placeholder="Legg til vare..." autocomplete="off">
+        <button class="add-btn" id="addBtn" aria-label="Legg til">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="empty-state" id="emptyState">
+        <span class="empty-icon">🛒</span>
+        <p>Ingen varer ennå.<br>Snakk eller skriv inn varer.</p>
+    </div>
+
+    <div id="activeList"></div>
+    <div id="checkedSection" style="display:none">
+        <div class="section-label">Ferdig</div>
+        <div id="checkedList"></div>
+    </div>
+</div>
+
+<!-- Bottom bar -->
+<div class="bottom-bar">
+    <div class="transcript-bubble" id="transcriptBubble"></div>
+    <div class="mic-wrap">
+        <button class="mic-btn" id="micBtn" aria-label="Taleinngang">
+            <div class="pulse-ring"></div>
+            <svg id="iconMic" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+            <svg id="iconStop" width="26" height="26" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+                <rect x="6" y="6" width="12" height="12" rx="2"/>
+            </svg>
+            <svg id="iconSpin" class="spin" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" style="display:none">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+        </button>
+        <span class="mic-hint" id="micHint">Trykk for å snakke</span>
+    </div>
+</div>
+
+<!-- Share sheet -->
+<div class="overlay" id="shareOverlay">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-content">
+            <h2>Del liste</h2>
+            <div class="big-code-row">
+                <span class="big-code" id="shareCodeDisplay">─────</span>
+                <button class="copy-btn" id="copyCodeBtn" title="Kopier kode">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="9" width="13" height="13" rx="2"/>
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                </button>
+            </div>
+            <p class="code-hint">Del koden med andre — alle med koden ser og redigerer listen live.</p>
+            <div class="divider"></div>
+            <p class="field-label">Bli med en annen liste</p>
+            <div class="join-row">
+                <input class="join-input" id="joinInput" type="text" placeholder="AB3CD" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false">
+                <button class="join-btn" id="joinBtn">Bli med</button>
+            </div>
+            <div class="join-error" id="joinError"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings sheet -->
+<div class="overlay" id="settingsOverlay">
+    <div class="sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-content">
+            <h2>Innstillinger</h2>
+            <button class="btn-danger" id="clearCheckedBtn">Fjern avkryssede varer</button>
+            <button class="btn-danger" id="clearAllBtn">Fjern alle varer</button>
+            <div class="divider"></div>
+            <button class="btn-neutral" id="newListBtn">Opprett ny liste</button>
+        </div>
+    </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Globals ────────────────────────────────────────────────────────────────────
+let sb = null;
+let listId = null;
+let listCode = null;
+let items = [];
+let realtimeChannel = null;
+const pendingInserts = new Set();
+
+// ── DOM refs ───────────────────────────────────────────────────────────────────
+const loadingOverlay   = document.getElementById('loadingOverlay');
+const activeList       = document.getElementById('activeList');
+const checkedList      = document.getElementById('checkedList');
+const checkedSection   = document.getElementById('checkedSection');
+const emptyState       = document.getElementById('emptyState');
+const codeText         = document.getElementById('codeText');
+const shareCodeDisplay = document.getElementById('shareCodeDisplay');
+const micBtn           = document.getElementById('micBtn');
+const micHint          = document.getElementById('micHint');
+const iconMic          = document.getElementById('iconMic');
+const iconStop         = document.getElementById('iconStop');
+const iconSpin         = document.getElementById('iconSpin');
+const transcriptBubble = document.getElementById('transcriptBubble');
+const shareOverlay     = document.getElementById('shareOverlay');
+const settingsOverlay  = document.getElementById('settingsOverlay');
+const copyCodeBtn      = document.getElementById('copyCodeBtn');
+const joinInput        = document.getElementById('joinInput');
+const joinBtn          = document.getElementById('joinBtn');
+const joinError        = document.getElementById('joinError');
+const shareBtn         = document.getElementById('shareBtn');
+const codeChip         = document.getElementById('codeChip');
+const settingsBtn      = document.getElementById('settingsBtn');
+const clearCheckedBtn  = document.getElementById('clearCheckedBtn');
+const clearAllBtn      = document.getElementById('clearAllBtn');
+const newListBtn       = document.getElementById('newListBtn');
+const addInput         = document.getElementById('addInput');
+const addBtn           = document.getElementById('addBtn');
+
+// ── Init ───────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', init);
+
+async function init() {
+    try {
+        const res = await fetch('/api/config');
+        if (!res.ok) throw new Error('Kunne ikke laste konfigurasjon');
+        const { supabaseUrl, supabaseKey, error: cfgErr } = await res.json();
+        if (cfgErr) throw new Error(cfgErr);
+        if (!supabaseUrl || !supabaseKey) throw new Error('Supabase ikke konfigurert på server');
+
+        sb = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        const savedCode = localStorage.getItem('handleliste_code');
+        if (savedCode) {
+            const found = await findListByCode(savedCode);
+            if (found) {
+                listId = found.id;
+                listCode = savedCode;
+            } else {
+                await createNewList();
+            }
+        } else {
+            await createNewList();
+        }
+
+        await loadItems();
+        subscribeRealtime();
+        updateCodeDisplay();
+    } catch (err) {
+        console.error('Init error:', err);
+        loadingOverlay.innerHTML = `
+            <div class="load-error">
+                Kunne ikke koble til.<br>
+                <small>${esc(err.message)}</small><br>
+                <button onclick="location.reload()">Prøv igjen</button>
+            </div>`;
+        return;
+    }
+
+    loadingOverlay.style.display = 'none';
+}
+
+// ── List management ────────────────────────────────────────────────────────────
+async function findListByCode(code) {
+    const { data } = await sb.from('lists').select('id').eq('code', code.toUpperCase()).maybeSingle();
+    return data;
+}
+
+async function createNewList() {
+    const code = generateCode();
+    const { data, error } = await sb.from('lists').insert({ code }).select('id').single();
+
+    if (error) {
+        if (error.code === '23505') return createNewList(); // unique collision, retry
+        throw error;
+    }
+
+    listId = data.id;
+    listCode = code;
+    localStorage.setItem('handleliste_code', code);
+}
+
+async function switchToList(id, code) {
+    if (realtimeChannel) { await realtimeChannel.unsubscribe(); realtimeChannel = null; }
+    listId = id;
+    listCode = code;
+    localStorage.setItem('handleliste_code', code);
+    items = [];
+    await loadItems();
+    subscribeRealtime();
+    updateCodeDisplay();
+}
+
+function generateCode() {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    let c = '';
+    for (let i = 0; i < 5; i++) c += chars[Math.floor(Math.random() * chars.length)];
+    return c;
+}
+
+function updateCodeDisplay() {
+    codeText.textContent = listCode || '─────';
+    shareCodeDisplay.textContent = listCode || '─────';
+}
+
+// ── Data / Realtime ────────────────────────────────────────────────────────────
+async function loadItems() {
+    const { data, error } = await sb
+        .from('items')
+        .select('*')
+        .eq('list_id', listId)
+        .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    items = data || [];
+    render();
+}
+
+function subscribeRealtime() {
+    realtimeChannel = sb
+        .channel('list-' + listId)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'items', filter: `list_id=eq.${listId}` }, payload => {
+            const { eventType, new: n, old: o } = payload;
+
+            if (eventType === 'INSERT') {
+                if (pendingInserts.has(n.id)) { pendingInserts.delete(n.id); return; }
+                items.unshift(n);
+                render();
+            } else if (eventType === 'UPDATE') {
+                const idx = items.findIndex(i => i.id === n.id);
+                if (idx !== -1) { items[idx] = n; render(); }
+            } else if (eventType === 'DELETE') {
+                const prev = items.length;
+                items = items.filter(i => i.id !== o.id);
+                if (items.length !== prev) render();
+            }
+        })
+        .subscribe();
+}
+
+// ── CRUD ───────────────────────────────────────────────────────────────────────
+async function addItems(texts) {
+    const toAdd = texts.map(t => t.trim()).filter(Boolean);
+    if (!toAdd.length) return;
+
+    const newItems = toAdd.map(text => ({
+        id: crypto.randomUUID(),
+        list_id: listId,
+        text,
+        checked: false,
+        created_at: new Date().toISOString(),
+    }));
+
+    newItems.forEach(item => pendingInserts.add(item.id));
+    items.unshift(...newItems);
+    render();
+
+    const { error } = await sb.from('items').insert(
+        newItems.map(({ id, list_id, text, checked }) => ({ id, list_id, text, checked }))
+    );
+
+    if (error) {
+        newItems.forEach(item => { pendingInserts.delete(item.id); });
+        items = items.filter(i => !newItems.some(n => n.id === i.id));
+        render();
+        console.error('Insert failed:', error);
+    }
+}
+
+async function toggleItem(id) {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    item.checked = !item.checked;
+    render();
+
+    const { error } = await sb.from('items').update({ checked: item.checked }).eq('id', id);
+    if (error) { item.checked = !item.checked; render(); }
+}
+
+async function deleteItem(id) {
+    const snapshot = [...items];
+    items = items.filter(i => i.id !== id);
+    render();
+
+    const { error } = await sb.from('items').delete().eq('id', id);
+    if (error) { items = snapshot; render(); }
+}
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function render() {
+    const active  = items.filter(i => !i.checked);
+    const checked = items.filter(i => i.checked);
+
+    activeList.innerHTML  = '';
+    checkedList.innerHTML = '';
+    emptyState.classList.toggle('visible', items.length === 0);
+    checkedSection.style.display = checked.length ? '' : 'none';
+
+    active.forEach(item  => activeList.appendChild(buildItem(item)));
+    checked.forEach(item => checkedList.appendChild(buildItem(item)));
+}
+
+function buildItem(item) {
+    const el = document.createElement('div');
+    el.className = 'item' + (item.checked ? ' checked' : '');
+    el.innerHTML = `
+        <div class="check-ring"><div class="checkmark"></div></div>
+        <span class="item-text">${esc(item.text)}</span>
+        <button class="delete-btn" aria-label="Slett">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>`;
+    el.querySelector('.check-ring').addEventListener('click', () => toggleItem(item.id));
+    el.querySelector('.item-text').addEventListener('click',  () => toggleItem(item.id));
+    el.querySelector('.delete-btn').addEventListener('click', e => { e.stopPropagation(); deleteItem(item.id); });
+    return el;
+}
+
+function esc(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Manual add ─────────────────────────────────────────────────────────────────
+function handleManualAdd() {
+    const val = addInput.value.trim();
+    if (!val) return;
+    addItems([val]);
+    addInput.value = '';
+    addInput.focus();
+}
+
+addBtn.addEventListener('click', handleManualAdd);
+addInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleManualAdd(); });
+
+// ── Speech ─────────────────────────────────────────────────────────────────────
+let isRecording = false;
+let isProcessing = false;
+let mediaRecorder = null;
+let audioChunks = [];
+let mediaStream = null;
+
+micBtn.addEventListener('click', () => {
+    if (isProcessing) return;
+    if (isRecording) { stopRecording(); return; }
+    startRecording();
+});
+
+async function startRecording() {
+    try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+        alert('Mikrofontilgang nektet. Sjekk nettleserinnstillinger.');
+        return;
+    }
+
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(mediaStream);
+
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+
+    mediaRecorder.onstop = async () => {
+        mediaStream.getTracks().forEach(t => t.stop());
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const blob = new Blob(audioChunks, { type: mimeType });
+        await processAudio(blob, mimeType);
+    };
+
+    mediaRecorder.start();
+    isRecording = true;
+    setMicState('recording');
+    hideTranscript();
+}
+
+function stopRecording() {
+    isRecording = false;
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+}
+
+async function processAudio(blob, mimeType) {
+    setMicState('processing');
+    showTranscript('Transkriberer…');
+
+    try {
+        const base64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+
+        const res = await fetch('/api/transcribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audio: base64, mimeType }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+        const text = data.text?.trim();
+        if (!text) { setMicState('idle'); hideTranscript(); return; }
+
+        await processTranscript(text);
+    } catch (err) {
+        showTranscript('Feil: ' + err.message);
+        setTimeout(hideTranscript, 4000);
+        setMicState('idle');
+    }
+}
+
+async function processTranscript(text) {
+    if (!text.trim()) { setMicState('idle'); return; }
+    setMicState('processing'); showTranscript(text);
+
+    try {
+        const res  = await fetch('/api/extract', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcript: text }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        if (data.items?.length) await addItems(data.items);
+        setTimeout(hideTranscript, 800);
+    } catch (err) {
+        showTranscript('Feil: ' + err.message); setTimeout(hideTranscript, 4000);
+    }
+    setMicState('idle');
+}
+
+function setMicState(state) {
+    isProcessing = state === 'processing';
+    micBtn.classList.toggle('recording',  state === 'recording');
+    micBtn.classList.toggle('processing', state === 'processing');
+    iconMic.style.display  = state === 'idle'       ? '' : 'none';
+    iconStop.style.display = state === 'recording'  ? '' : 'none';
+    iconSpin.style.display = state === 'processing' ? '' : 'none';
+    micHint.textContent = { idle: 'Trykk for å snakke', recording: 'Hører på…', processing: 'Tolker…' }[state] || '';
+}
+
+function showTranscript(text) { transcriptBubble.textContent = text; transcriptBubble.classList.add('visible'); }
+function hideTranscript()     { transcriptBubble.classList.remove('visible'); }
+
+// ── Share sheet ────────────────────────────────────────────────────────────────
+const COPY_SVG  = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
+const CHECK_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#30D158" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+
+function openShare() {
+    shareCodeDisplay.textContent = listCode || '─────';
+    joinInput.value = '';
+    joinError.textContent = '';
+    copyCodeBtn.innerHTML = COPY_SVG;
+    shareOverlay.classList.add('visible');
+    setTimeout(() => joinInput.focus(), 350);
+}
+
+shareBtn.addEventListener('click', openShare);
+codeChip.addEventListener('click', openShare);
+
+shareOverlay.addEventListener('click', e => { if (e.target === shareOverlay) shareOverlay.classList.remove('visible'); });
+
+copyCodeBtn.addEventListener('click', async () => {
+    try {
+        await navigator.clipboard.writeText(listCode);
+        copyCodeBtn.innerHTML = CHECK_SVG;
+        setTimeout(() => { copyCodeBtn.innerHTML = COPY_SVG; }, 2000);
+    } catch (_) {}
+});
+
+joinInput.addEventListener('input', () => {
+    const pos = joinInput.selectionStart;
+    joinInput.value = joinInput.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    joinInput.setSelectionRange(pos, pos);
+    joinError.textContent = '';
+});
+
+joinInput.addEventListener('keydown', e => { if (e.key === 'Enter') joinBtn.click(); });
+
+joinBtn.addEventListener('click', async () => {
+    const code = joinInput.value.trim().toUpperCase();
+    if (code.length !== 5) { joinError.textContent = 'Koden må være 5 tegn'; return; }
+    if (code === listCode)  { shareOverlay.classList.remove('visible'); return; }
+
+    joinBtn.disabled = true; joinBtn.textContent = '…';
+    joinError.textContent = '';
+
+    try {
+        const found = await findListByCode(code);
+        if (!found) throw new Error('Kode ikke funnet');
+        await switchToList(found.id, code);
+        shareOverlay.classList.remove('visible');
+    } catch (err) {
+        joinError.textContent = err.message;
+    } finally {
+        joinBtn.disabled = false; joinBtn.textContent = 'Bli med';
+    }
+});
+
+// ── Settings sheet ─────────────────────────────────────────────────────────────
+settingsBtn.addEventListener('click', () => settingsOverlay.classList.add('visible'));
+settingsOverlay.addEventListener('click', e => { if (e.target === settingsOverlay) settingsOverlay.classList.remove('visible'); });
+
+clearCheckedBtn.addEventListener('click', async () => {
+    const ids = items.filter(i => i.checked).map(i => i.id);
+    if (!ids.length) { settingsOverlay.classList.remove('visible'); return; }
+    items = items.filter(i => !i.checked);
+    render(); settingsOverlay.classList.remove('visible');
+    await sb.from('items').delete().in('id', ids);
+});
+
+clearAllBtn.addEventListener('click', async () => {
+    if (!confirm('Fjerne alle varer fra listen?')) return;
+    const ids = items.map(i => i.id);
+    items = []; render(); settingsOverlay.classList.remove('visible');
+    if (ids.length) await sb.from('items').delete().in('id', ids);
+});
+
+newListBtn.addEventListener('click', async () => {
+    if (!confirm('Opprett ny tom liste? Du får en ny kode.')) return;
+    settingsOverlay.classList.remove('visible');
+    loadingOverlay.style.display = 'flex';
+    if (realtimeChannel) { await realtimeChannel.unsubscribe(); realtimeChannel = null; }
+    items = []; listId = null; listCode = null;
+    localStorage.removeItem('handleliste_code');
+    await createNewList();
+    await loadItems();
+    subscribeRealtime();
+    updateCodeDisplay();
+    loadingOverlay.style.display = 'none';
+});
+</script>
+</body>
+</html>

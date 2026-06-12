@@ -1,0 +1,19 @@
+{
+  "name": "handleliste",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "vercel dev",
+    "deploy": "vercel deploy"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.55.0",
+    "openai": "^6.42.0"
+  },
+  "devDependencies": {
+    "vercel": "latest"
+  }
+}
