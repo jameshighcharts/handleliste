@@ -431,7 +431,7 @@
             </svg>
         </button>
         <!-- Utensils icon -->
-        <button class="icon-btn" id="utensilsBtn" title="Matservering">
+        <button class="icon-btn" id="utensilsBtn" title="Meals">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>
             </svg>
@@ -528,7 +528,7 @@
     <div class="sheet">
         <div class="sheet-handle"></div>
         <div class="sheet-content" id="foodContent">
-            <h2>Matservering</h2>
+            <h2>Meals</h2>
             <div id="foodList"></div>
             <div id="customizingRecipe" style="display:none">
                 <div class="field-label">Rediger matservering</div>
@@ -601,6 +601,7 @@ let listId = null;
 let listCode = null;
 let items = [];
 let trips = [];
+let meals = [];
 let realtimeChannel = null;
 const pendingInserts = new Set();
 const NO_DAYS = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
@@ -662,6 +663,7 @@ async function init() {
 
         await loadItems();
         await loadTrips();
+        await loadMeals();
         subscribeRealtime();
         updateCodeDisplay();
     } catch (err) {
@@ -705,8 +707,10 @@ async function switchToList(id, code) {
     localStorage.setItem('handleliste_code', code);
     items = [];
     trips = [];
+    meals = [];
     await loadItems();
     await loadTrips();
+    await loadMeals();
     subscribeRealtime();
     updateCodeDisplay();
 }
@@ -937,7 +941,7 @@ async function processTranscript(text) {
         const res  = await fetch('/api/extract', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ transcript: text, recipes: PRESETS, trips: tripsPayload(), today: todayPayload() }),
+            body: JSON.stringify({ transcript: text, recipes: recipesPayload(), trips: tripsPayload(), today: todayPayload() }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
@@ -1054,6 +1058,26 @@ const PRESETS = {
 let currentRecipe = null;
 let editingRecipe = false;
 
+async function loadMeals() {
+    const { data, error } = await sb
+        .from('meals')
+        .select('*')
+        .eq('list_id', listId)
+        .order('created_at', { ascending: true });
+    if (error) { console.error('loadMeals:', error); return; }
+    meals = data || [];
+}
+
+// Built-in presets + saved custom meals, for the voice extractor.
+function recipesPayload() {
+    const out = { ...PRESETS };
+    meals.forEach(m => {
+        const ings = Array.isArray(m.ingredients) ? m.ingredients : [];
+        out[m.id] = { name: m.name, ingredients: ings };
+    });
+    return out;
+}
+
 utensilsBtn.addEventListener('click', () => {
     showFoodSheet();
 });
@@ -1064,38 +1088,79 @@ function showFoodSheet() {
     customizingRecipe.style.display = 'none';
     foodList.innerHTML = '';
 
+    // Built-in presets (not deletable)
     Object.entries(PRESETS).forEach(([key, preset]) => {
-        const card = document.createElement('div');
-        card.className = 'recipe-card';
-        card.innerHTML = `
-            <div class="recipe-info">
-                <div class="recipe-name">${esc(preset.name)}</div>
-                <div class="recipe-count">${preset.ingredients.length} ingredienser</div>
-            </div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                <polyline points="9 18 15 12 9 6"/>
-            </svg>
-        `;
-        card.addEventListener('click', () => startEditRecipe({ ...preset }));
-        foodList.appendChild(card);
+        foodList.appendChild(buildMealCard({
+            name: preset.name,
+            ingredients: preset.ingredients,
+            count: preset.ingredients.length,
+            onOpen: () => startEditRecipe({ name: preset.name, ingredients: [...preset.ingredients] }),
+        }));
     });
 
-    // Custom recipe option
+    // Saved custom meals (deletable)
+    meals.forEach(meal => {
+        const ings = Array.isArray(meal.ingredients) ? meal.ingredients : [];
+        foodList.appendChild(buildMealCard({
+            name: meal.name,
+            ingredients: ings,
+            count: ings.length,
+            onOpen: () => startEditRecipe({ name: meal.name, ingredients: [...ings], _mealId: meal.id }),
+            onDelete: () => deleteMeal(meal),
+        }));
+    });
+
+    // Create-your-own option
     const customCard = document.createElement('div');
     customCard.className = 'recipe-card';
     customCard.innerHTML = `
         <div class="recipe-info">
-            <div class="recipe-name">Egen servering</div>
+            <div class="recipe-name">Lag egen liste</div>
             <div class="recipe-count">Lag din egen</div>
         </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+    `;
+    customCard.addEventListener('click', () => startEditRecipe({ name: '', ingredients: [], _custom: true }));
+    foodList.appendChild(customCard);
+
+    foodOverlay.classList.add('visible');
+}
+
+function buildMealCard({ name, count, onOpen, onDelete }) {
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+    const deleteBtn = onDelete ? `
+        <button class="delete-btn" aria-label="Slett måltid" style="margin-right:4px">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>` : '';
+    card.innerHTML = `
+        <div class="recipe-info">
+            <div class="recipe-name">${esc(name)}</div>
+            <div class="recipe-count">${count} ingredienser</div>
+        </div>
+        ${deleteBtn}
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <polyline points="9 18 15 12 9 6"/>
         </svg>
     `;
-    customCard.addEventListener('click', () => startEditRecipe({ name: '', ingredients: [] }));
-    foodList.appendChild(customCard);
+    card.addEventListener('click', e => {
+        if (e.target.closest('.delete-btn')) return;
+        onOpen();
+    });
+    if (onDelete) {
+        card.querySelector('.delete-btn').addEventListener('click', e => { e.stopPropagation(); onDelete(); });
+    }
+    return card;
+}
 
-    foodOverlay.classList.add('visible');
+async function deleteMeal(meal) {
+    if (!confirm(`Slette måltidet "${meal.name}"?`)) return;
+    meals = meals.filter(m => m.id !== meal.id);
+    showFoodSheet();
+    const { error } = await sb.from('meals').delete().eq('id', meal.id);
+    if (error) { console.error('deleteMeal:', error); await loadMeals(); showFoodSheet(); }
 }
 
 function startEditRecipe(recipe) {
@@ -1168,8 +1233,23 @@ saveRecipeBtn.addEventListener('click', async () => {
         return;
     }
 
-    const items = currentRecipe.ingredients.map(ing => `${name}: ${ing}`);
-    await addItems(items);
+    const ingredients = [...currentRecipe.ingredients];
+
+    // Persist custom meals so they stay reusable alongside the presets.
+    if (currentRecipe._mealId) {
+        const idx = meals.findIndex(m => m.id === currentRecipe._mealId);
+        if (idx !== -1) { meals[idx] = { ...meals[idx], name, ingredients }; }
+        const { error } = await sb.from('meals').update({ name, ingredients }).eq('id', currentRecipe._mealId);
+        if (error) console.error('update meal:', error);
+    } else if (currentRecipe._custom) {
+        const newMeal = { id: crypto.randomUUID(), list_id: listId, name, ingredients, created_at: new Date().toISOString() };
+        meals.push(newMeal);
+        const { error } = await sb.from('meals').insert(newMeal);
+        if (error) { console.error('insert meal:', error); meals = meals.filter(m => m.id !== newMeal.id); }
+    }
+
+    const lines = ingredients.map(ing => `${name}: ${ing}`);
+    await addItems(lines);
     foodOverlay.classList.remove('visible');
     currentRecipe = null;
     editingRecipe = false;
@@ -1350,9 +1430,11 @@ newListBtn.addEventListener('click', async () => {
     items = []; listId = null; listCode = null;
     localStorage.removeItem('handleliste_code');
     trips = [];
+    meals = [];
     await createNewList();
     await loadItems();
     await loadTrips();
+    await loadMeals();
     subscribeRealtime();
     updateCodeDisplay();
     loadingOverlay.style.display = 'none';
