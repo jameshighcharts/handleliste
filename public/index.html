@@ -2,15 +2,34 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Handleliste</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#E7E5FA">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Handleliste">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script>
+        // Register service worker for PWA / install support.
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/sw.js').catch(function () {});
+            });
+        }
+    </script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            background: #F5F5F0;
+            background: #E7E5FA;
             color: #1C1C1E;
             min-height: 100dvh;
             display: flex;
@@ -23,7 +42,7 @@
         #loadingOverlay {
             position: fixed;
             inset: 0;
-            background: #F5F5F0;
+            background: #E7E5FA;
             z-index: 1000;
             display: flex;
             align-items: center;
@@ -56,7 +75,7 @@
             background: #1C1C1E;
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 4px;
             font-size: 15px;
             cursor: pointer;
         }
@@ -67,7 +86,7 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: #F5F5F0;
+            background: #E7E5FA;
             position: sticky;
             top: 0;
             z-index: 10;
@@ -139,7 +158,7 @@
             display: flex;
             align-items: center;
             background: #FFFFFF;
-            border-radius: 14px;
+            border-radius: 4px;
             padding: 15px 16px;
             margin-bottom: 8px;
             gap: 13px;
@@ -192,13 +211,13 @@
             position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
             width: 100%; max-width: 480px;
             padding: 12px 24px env(safe-area-inset-bottom, 28px);
-            background: linear-gradient(to top, #F5F5F0 65%, rgba(245,245,240,0));
+            background: linear-gradient(to top, #E7E5FA 65%, rgba(231,229,250,0));
             display: flex; flex-direction: column; align-items: center; gap: 10px;
             pointer-events: none;
         }
 
         .transcript-bubble {
-            background: #FFFFFF; border-radius: 20px; padding: 10px 18px;
+            background: #FFFFFF; border-radius: 4px; padding: 10px 18px;
             font-size: 15px; color: #3C3C43; box-shadow: 0 2px 12px rgba(0,0,0,0.1);
             max-width: 320px; text-align: center; line-height: 1.4;
             opacity: 0; transform: translateY(6px);
@@ -252,7 +271,7 @@
 
         .sheet {
             width: 100%; max-width: 480px; margin: 0 auto;
-            background: #FFFFFF; border-radius: 24px 24px 0 0;
+            background: #FFFFFF; border-radius: 4px 4px 0 0;
             padding: 8px 0 env(safe-area-inset-bottom, 40px);
             transform: translateY(100%);
             transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
@@ -260,14 +279,14 @@
 
         .overlay.visible .sheet { transform: translateY(0); }
 
-        .sheet-handle { width: 36px; height: 4px; background: #E5E5EA; border-radius: 2px; margin: 12px auto 24px; }
+        .sheet-handle { width: 36px; height: 4px; background: #E5E5EA; border-radius: 4px; margin: 12px auto 24px; }
         .sheet-content { padding: 0 24px 8px; }
         .sheet h2 { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
 
         /* Share sheet */
         .big-code-row {
             display: flex; align-items: center; justify-content: center; gap: 12px;
-            background: #F5F5F0; border-radius: 16px; padding: 20px; margin-bottom: 12px;
+            background: #E7E5FA; border-radius: 4px; padding: 20px; margin-bottom: 12px;
         }
 
         .big-code {
@@ -276,7 +295,7 @@
         }
 
         .copy-btn {
-            width: 38px; height: 38px; border: none; background: white; border-radius: 10px;
+            width: 38px; height: 38px; border: none; background: white; border-radius: 4px;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
             color: #636366; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             transition: color 0.2s; flex-shrink: 0;
@@ -293,9 +312,9 @@
         .join-row { display: flex; gap: 8px; margin-bottom: 8px; }
 
         .join-input {
-            flex: 1; padding: 14px 16px; border: 1.5px solid #E5E5EA; border-radius: 12px;
+            flex: 1; padding: 14px 16px; border: 1.5px solid #E5E5EA; border-radius: 4px;
             font-size: 20px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase;
-            background: #F5F5F0; outline: none; color: #1C1C1E;
+            background: #E7E5FA; outline: none; color: #1C1C1E;
             font-family: 'SF Mono', 'Monaco', monospace; transition: border-color 0.15s, background 0.15s;
         }
 
@@ -303,7 +322,7 @@
 
         .join-btn {
             padding: 14px 18px; background: #1C1C1E; color: white; border: none;
-            border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;
+            border-radius: 4px; font-size: 15px; font-weight: 600; cursor: pointer;
             white-space: nowrap; transition: opacity 0.15s;
         }
 
@@ -314,7 +333,7 @@
         /* Settings sheet */
         .btn-danger {
             width: 100%; padding: 15px; background: none; border: 1.5px solid #E5E5EA;
-            border-radius: 14px; font-size: 16px; font-weight: 500; color: #FF3B30;
+            border-radius: 4px; font-size: 16px; font-weight: 500; color: #FF3B30;
             cursor: pointer; transition: background 0.15s; margin-bottom: 10px;
             font-family: inherit;
         }
@@ -324,7 +343,7 @@
 
         .btn-neutral {
             width: 100%; padding: 15px; background: none; border: 1.5px solid #E5E5EA;
-            border-radius: 14px; font-size: 16px; font-weight: 500; color: #636366;
+            border-radius: 4px; font-size: 16px; font-weight: 500; color: #636366;
             cursor: pointer; transition: background 0.15s; margin-bottom: 10px;
             font-family: inherit;
         }
@@ -336,7 +355,7 @@
         .add-row { display: flex; gap: 10px; margin-bottom: 16px; }
 
         .add-input {
-            flex: 1; padding: 13px 16px; border: 1.5px solid #E5E5EA; border-radius: 12px;
+            flex: 1; padding: 13px 16px; border: 1.5px solid #E5E5EA; border-radius: 4px;
             font-size: 16px; background: white; outline: none; color: #1C1C1E;
             transition: border-color 0.15s; font-family: inherit;
         }
@@ -344,7 +363,7 @@
         .add-input:focus { border-color: #1C1C1E; }
 
         .add-btn {
-            width: 48px; height: 48px; border-radius: 12px; border: none;
+            width: 48px; height: 48px; border-radius: 4px; border: none;
             background: #1C1C1E; color: white; cursor: pointer;
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
             transition: opacity 0.15s;
